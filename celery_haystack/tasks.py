@@ -1,3 +1,4 @@
+from celery.contrib import rdb
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.db.models.loading import get_model
@@ -37,7 +38,7 @@ class CeleryHaystackSignalHandler(Task):
 
         if len(bits) < 2:
             logger = self.get_logger(**kwargs)
-            logger.error("Unable to parse object "
+            logger.warning("Unable to parse object "
                          "identifer '%s'. Moving on..." % identifier)
             return (None, None)
 
@@ -69,11 +70,11 @@ class CeleryHaystackSignalHandler(Task):
         try:
             instance = model_class._default_manager.get(pk=pk)
         except model_class.DoesNotExist:
-            logger.error("Couldn't load %s.%s.%s. Somehow it went missing?" %
+            logger.warning("Couldn't load %s.%s.%s. Somehow it went missing?" %
                          (model_class._meta.app_label.lower(),
                           model_class._meta.object_name.lower(), pk))
         except model_class.MultipleObjectsReturned:
-            logger.error("More than one object with pk %s. Oops?" % pk)
+            logger.warning("More than one object with pk %s. Oops?" % pk)
         return instance
 
     def get_indexes(self, model_class, **kwargs):
@@ -104,8 +105,8 @@ class CeleryHaystackSignalHandler(Task):
         object_path, pk = self.split_identifier(identifier, **kwargs)
         if object_path is None or pk is None:
             msg = "Couldn't handle object with identifier %s" % identifier
-            logger.error(msg)
-            raise ValueError(msg)
+            logger.warning(msg)
+            #raise ValueError(msg)
 
         # Then get the model class for the object path
         model_class = self.get_model_class(object_path, **kwargs)
@@ -124,14 +125,14 @@ class CeleryHaystackSignalHandler(Task):
                 else:
                     msg = ("Deleted '%s' (with %s)" %
                            (identifier, current_index_name))
-                    logger.debug(msg)
+                    logger.warning(msg)
             elif action == 'update':
                 # and the instance of the model class with the pk
                 instance = self.get_instance(model_class, pk, **kwargs)
                 if instance is None:
                     logger.debug("Failed updating '%s' (with %s)" %
                                  (identifier, current_index_name))
-                    raise ValueError("Couldn't load object '%s'" % identifier)
+                    #raise ValueError("Couldn't load object '%s'" % identifier)
 
                 # Call the appropriate handler of the current index and
                 # handle exception if neccessary
@@ -143,9 +144,9 @@ class CeleryHaystackSignalHandler(Task):
                 else:
                     msg = ("Updated '%s' (with %s)" %
                            (identifier, current_index_name))
-                    logger.debug(msg)
+                    logger.warning(msg)
             else:
-                logger.error("Unrecognized action '%s'. Moving on..." % action)
+                logger.warning("Unrecognized action '%s'. Moving on..." % action)
                 raise ValueError("Unrecognized action %s" % action)
 
 
