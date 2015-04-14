@@ -120,7 +120,7 @@ class CeleryHaystackSignalHandler(Task):
                 try:
                     current_index.remove_object(identifier, using=using)
                 except Exception as exc:
-                    logger.exception(exc)
+                    logger.debug(exc.message)
                     self.retry(exc=exc)
                 else:
                     msg = ("Deleted '%s' (with %s)" %
@@ -139,7 +139,7 @@ class CeleryHaystackSignalHandler(Task):
                 try:
                     current_index.update_object(instance, using=using)
                 except Exception as exc:
-                    logger.exception(exc)
+                    logger.debug(exc.message)
                     self.retry(exc=exc)
                 else:
                     msg = ("Updated '%s' (with %s)" %
