@@ -4,6 +4,7 @@ from django.core.management import call_command
 from django.db.models.loading import get_model
 
 from .conf import settings
+from django.conf import settings as django_setings
 
 try:
     from haystack import connections, connection_router
@@ -25,8 +26,8 @@ else:
 
 class CeleryHaystackSignalHandler(Task):
     using = settings.CELERY_HAYSTACK_DEFAULT_ALIAS
-    max_retries = settings.CELERY_HAYSTACK_MAX_RETRIES
-    default_retry_delay = settings.CELERY_HAYSTACK_RETRY_DELAY
+    max_retries = django_setings.CELERY_HAYSTACK_MAX_RETRIES
+    default_retry_delay = django_setings.CELERY_HAYSTACK_RETRY_DELAY
 
     def split_identifier(self, identifier, **kwargs):
         """
@@ -121,7 +122,7 @@ class CeleryHaystackSignalHandler(Task):
                     current_index.remove_object(identifier, using=using)
                 except Exception as exc:
                     logger.debug(exc.message)
-                    self.retry(exc=exc)
+                    self.retry(exc=exc, countdown=django_setings.CELERY_HAYSTACK_RETRY_DELAY, max_retries=django_setings.CELERY_HAYSTACK_MAX_RETRIES)
                 else:
                     msg = ("Deleted '%s' (with %s)" %
                            (identifier, current_index_name))
@@ -140,7 +141,7 @@ class CeleryHaystackSignalHandler(Task):
                     current_index.update_object(instance, using=using)
                 except Exception as exc:
                     logger.debug(exc.message)
-                    self.retry(exc=exc)
+                    self.retry(exc=exc, countdown=django_setings.CELERY_HAYSTACK_RETRY_DELAY, max_retries=django_setings.CELERY_HAYSTACK_MAX_RETRIES)
                 else:
                     msg = ("Updated '%s' (with %s)" %
                            (identifier, current_index_name))
