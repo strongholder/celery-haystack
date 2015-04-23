@@ -5,6 +5,7 @@ from haystack.exceptions import NotHandled
 
 from .utils import enqueue_task
 from .indexes import CelerySearchIndex
+from django.conf import settings as django_settings
 
 
 class CelerySignalProcessor(BaseSignalProcessor):
@@ -29,8 +30,8 @@ class CelerySignalProcessor(BaseSignalProcessor):
         handles the model, check if the index is Celery-enabled and
         enqueue task.
         """
-        using_backends = self.connection_router.for_write(instance=instance)
-
+        #using_backends = self.connection_router.for_write(instance=instance)
+        using_backends = django_settings.CONTENT_LANGUAGES
         for using in using_backends:
             try:
                 connection = self.connections[using]

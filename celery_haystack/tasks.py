@@ -1,4 +1,3 @@
-from celery.contrib import rdb
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management import call_command
 from django.db.models.loading import get_model
@@ -87,7 +86,8 @@ class CeleryHaystackSignalHandler(Task):
                 index_holder = site
                 yield index_holder.get_index(model_class), self.using
             else:
-                using_backends = connection_router.for_write(**{'models': [model_class]})
+                #using_backends = connection_router.for_write(**{'models': [model_class]})
+                using_backends = django_setings.CONTENT_LANGUAGES
                 for using in using_backends:
                     index_holder = connections[using].get_unified_index()
                     yield index_holder.get_index(model_class), using
