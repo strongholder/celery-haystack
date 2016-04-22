@@ -130,6 +130,7 @@ class CeleryHaystackSignalHandler(Task):
             elif action == 'update':
                 # and the instance of the model class with the pk
                 instance = self.get_instance(model_class, pk, **kwargs)
+
                 if instance is None:
                     logger.debug("Failed updating '%s' (with %s)" %
                                  (identifier, current_index_name))
@@ -138,7 +139,24 @@ class CeleryHaystackSignalHandler(Task):
                 # Call the appropriate handler of the current index and
                 # handle exception if neccessary
                 try:
-                    current_index.update_object(instance, using=using)
+                    if hasattr(instance, "version_end_date"):
+                        # remove old versions information and update the index with the newest version
+                        identity = instance.identity
+                        qs = model_class._default_manager.filter(identity=identity)
+                        older_versions_pks = qs.exclude(version_end_date=None).values_list("pk", flat=True)
+                        latest_version = qs.filter(version_end_date=None).first()
+
+                        for old_version in older_versions_pks:
+                            old_version_identified = "%s.%s.%s" % (
+                                instance._meta.app_label, instance._meta.model_name, old_version
+                            )
+                            current_index.remove_object(old_version_identified, using=using)
+
+                        current_index.update_object(latest_version, using=using)
+
+                    else:
+                        current_index.update_object(instance, using=using)
+
                 except Exception as exc:
                     logger.debug(exc.message)
                     self.retry(exc=exc, countdown=django_setings.CELERY_HAYSTACK_RETRY_DELAY, max_retries=django_setings.CELERY_HAYSTACK_MAX_RETRIES)
