@@ -35,4 +35,19 @@ def enqueue_task(action, instance):
         update_task = get_update_task()
         update_task.delay(action, identifier)
 
+    on_transaction_commit.identifier = get_identifier(instance)
+    on_transaction_commit.action = action
+
+    if action == "delete":
+        # clear previous tasks for the same instance from the queue; no point in executing them if it is already scheduled for deletion
+        for transaction_id, func in db_connection.run_on_commit:
+            if getattr(func, "identifier", None) == on_transaction_commit.identifier:
+                db_connection.run_on_commit.remove((transaction_id, func, ))
+
+    elif action == "update":
+        # clear previous tasks for the same instance update operation
+        for transaction_id, func in db_connection.run_on_commit:
+            if getattr(func, "identifier", None) == on_transaction_commit.identifier and getattr(func, "action", None) == action:
+                db_connection.run_on_commit.remove((transaction_id, func, ))
+
     db_connection.on_commit(on_transaction_commit)
