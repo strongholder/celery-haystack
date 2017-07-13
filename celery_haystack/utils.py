@@ -25,21 +25,23 @@ def get_update_task(task_path=None):
 
 def enqueue_task(action, instance):
     """
-    Common utility for enqueing a task for the given action and
+    Common utility for enqueueing a task for the given action and
     model instance.
     """
 
+    identifier = get_identifier(instance)
+
     # trigger the index updating only when the database transaction has finished!
     def on_transaction_commit():
-        identifier = get_identifier(instance)
         update_task = get_update_task()
         update_task.delay(action, identifier)
 
-    on_transaction_commit.identifier = get_identifier(instance)
+    on_transaction_commit.identifier = identifier
     on_transaction_commit.action = action
 
     if action == "delete":
-        # clear previous tasks for the same instance from the queue; no point in executing them if it is already scheduled for deletion
+        # clear previous tasks for the same instance from the queue; no point in executing
+        # them if it is already scheduled for deletion
         for transaction_id, func in db_connection.run_on_commit:
             if getattr(func, "identifier", None) == on_transaction_commit.identifier:
                 db_connection.run_on_commit.remove((transaction_id, func, ))
